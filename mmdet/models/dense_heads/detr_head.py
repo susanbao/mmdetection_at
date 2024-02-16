@@ -17,8 +17,9 @@ from mmdet.structures.bbox import (bbox_cxcywh_to_xyxy, bbox_overlaps,
 from mmdet.utils import (ConfigType, InstanceList, OptInstanceList,
                          OptMultiConfig, reduce_mean)
 from ..losses import QualityFocalLoss
-from ..utils import multi_apply
-
+from ..utils import multi_apply, transform_tensors_to_list
+import json
+import os
 
 @MODELS.register_module()
 class DETRHead(BaseModule):
@@ -118,6 +119,7 @@ class DETRHead(BaseModule):
             self.cls_out_channels = num_classes + 1
 
         self._init_layers()
+        self._cnt = 0
 
     def _init_layers(self) -> None:
         """Initialize layers of the transformer head."""
@@ -160,7 +162,33 @@ class DETRHead(BaseModule):
         layers_bbox_preds = self.fc_reg(
             self.activate(self.reg_ffn(hidden_states))).sigmoid()
         return layers_cls_scores, layers_bbox_preds
+    
+    def create_folder_if_not_exists(self, folder_path):
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
 
+    def store_results(self, hidden_states, outs, batch_gt_instances, batch_img_metas):
+        split = "val"
+        json_data = {}
+        json_data['feature'] = transform_tensors_to_list(hidden_states)
+        json_data['pred_logits'] = transform_tensors_to_list(outs[0])
+        json_data['pred_boxes'] = transform_tensors_to_list(outs[1])
+        json_data['gt_labels'] = transform_tensors_to_list(batch_gt_instances[0]['labels'])
+        json_data['gt_boxes'] = transform_tensors_to_list(batch_gt_instances[0]['bboxes'])
+        json_data['img_metas'] = batch_img_metas
+
+        path = "./pro_data/detr_city"
+        self.create_folder_if_not_exists(path)
+        path = os.path.join(path, split)
+        self.create_folder_if_not_exists(path)
+        path = os.path.join(path, "output")
+        self.create_folder_if_not_exists(path)
+        path =  os.path.join(path, str(self._cnt) +".json")
+        with open(path, "w") as outfile:
+            json.dump(json_data, outfile)
+
+        self._cnt += 1
+    
     def loss(self, hidden_states: Tensor,
              batch_data_samples: SampleList) -> dict:
         """Perform forward propagation and loss calculation of the detection
@@ -186,6 +214,7 @@ class DETRHead(BaseModule):
         outs = self(hidden_states)
         loss_inputs = outs + (batch_gt_instances, batch_img_metas)
         losses = self.loss_by_feat(*loss_inputs)
+        self.store_results(hidden_states, outs, batch_gt_instances, batch_img_metas)
         return losses
 
     def loss_by_feat(

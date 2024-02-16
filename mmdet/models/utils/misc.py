@@ -45,6 +45,24 @@ class SigmoidGeometricMean(Function):
 
 sigmoid_geometric_mean = SigmoidGeometricMean.apply
 
+def transform_tensor_to_list(l):
+    return l.cpu().tolist()
+
+def transform_tensors_to_list(l):
+    if torch.is_tensor(l):
+        return transform_tensor_to_list(l)
+    if isinstance(l, list):
+        r = []
+        for i in l:
+            r.append(transform_tensors_to_list(i))
+        return r
+    if isinstance(l, dict):
+        r = {}
+        for k,v in l.items():
+            r[k] = transform_tensors_to_list(v)
+        return r
+    return l
+
 
 def interpolate_as(source, target, mode='bilinear', align_corners=False):
     """Interpolate the `source` to the shape of the `target`.

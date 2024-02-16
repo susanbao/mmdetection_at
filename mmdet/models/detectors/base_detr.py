@@ -162,6 +162,9 @@ class DetectionTransformer(BaseDetector, metaclass=ABCMeta):
         head_inputs_dict = self.forward_transformer(img_feats,
                                                     batch_data_samples)
         results = self.bbox_head.forward(**head_inputs_dict)
+        
+        # store the head_inputs_dict as feature, the results as detected output
+        
         return results
 
     def forward_transformer(self,

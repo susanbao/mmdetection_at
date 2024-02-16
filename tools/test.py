@@ -13,6 +13,7 @@ from mmdet.engine.hooks.utils import trigger_visualization_hook
 from mmdet.evaluation import DumpDetResults
 from mmdet.registry import RUNNERS
 from mmdet.utils import setup_cache_size_limit_of_dynamo
+import ipdb
 
 
 # TODO: support fuse_conv_bn and format_only
@@ -64,6 +65,7 @@ def parse_args():
 
 
 def main():
+    # ipdb.set_trace()
     args = parse_args()
 
     # Reduce the number of repeated compilations and improve
