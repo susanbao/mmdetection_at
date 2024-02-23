@@ -127,13 +127,13 @@ train_dataloader = dict(dataset=dict(dataset=dict(pipeline=train_pipeline)))
 # optimizer
 optim_wrapper = dict(
     type='OptimWrapper',
-    optimizer=dict(type='AdamW', lr=0.0001, weight_decay=0.0001),
+    optimizer=dict(type='AdamW', lr=0.001, weight_decay=0.001),
     clip_grad=dict(max_norm=0.1, norm_type=2),
     paramwise_cfg=dict(
         custom_keys={'backbone': dict(lr_mult=0.1, decay_mult=1.0)}))
 
 # learning policy
-max_epochs = 10 #150
+max_epochs = 50 #150
 train_cfg = dict(
     type='EpochBasedTrainLoop', max_epochs=max_epochs, val_interval=1)
 val_cfg = dict(type='ValLoop')
@@ -145,7 +145,7 @@ param_scheduler = [
         begin=0,
         end=max_epochs,
         by_epoch=True,
-        milestones=[100],
+        milestones=[10],
         gamma=0.1)
 ]
 

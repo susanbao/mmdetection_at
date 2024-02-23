@@ -1,3 +1,10 @@
+# checkpoints, output
+checkpoints/
+output/
+outputs/
+logs/
+pro_data/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

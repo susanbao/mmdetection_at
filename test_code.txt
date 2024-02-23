@@ -5,4 +5,8 @@ python tools/dataset_converters/cityscapes.py ./data/cityscapes --nproc 8 --out-
 train a detr model on cityescapes:
 CUDA_VISIBLE_DEVICES=0 python tools/train.py configs/detr/detr_r50_8xb2-150e_city.py >logs/detr_city_train.logs 2>logs/detr_city_train.err&
 
-python tools/test.py ./configs/detr/detr_r50_8xb2-150e_city.py ./work_dirs/detr_r50_8xb2-150e_city/epoch_2.pth
+python tools/test.py ./configs/detr/detr_r50_8xb2-150e_city.py ./work_dirs/detr_r50_8xb2-150e_city/epoch_4.pth
+
+prepare data:
+python prepare_data_for_ViT.py --split train >logs/prepare_detr_train_data.logs 2>logs/prepare_detr_train_data.err&
+python prepare_data_for_ViT.py --start_nums 55895 --count 55398 --split train >logs/prepare_detr_train_data.logs 2>logs/prepare_detr_train_data.err&
