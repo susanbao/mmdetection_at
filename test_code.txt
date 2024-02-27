@@ -1,6 +1,9 @@
 python tools/test.py ./configs/detr/detr_r50_8xb2-150e_coco.py ./checkpoints/detr_r50_8xb2-150e_coco_20221023_153551-436d03e8.pth >logs/detr_train.logs 2>logs/detr_train.err&
 
+python tools/test.py ./configs/deformable_detr/deformable-detr_r50_16xb2-50e_coco.py ./checkpoints/deformable-detr_r50_16xb2-50e_coco_20221029_210934-6bc7d21b.pth >logs/dfdetr_train.logs 2>logs/dfdetr_train.err&
+
 python tools/dataset_converters/cityscapes.py ./data/cityscapes --nproc 8 --out-dir ./data/cityscapes/annotations
+
 
 train a detr model on cityescapes:
 CUDA_VISIBLE_DEVICES=0 python tools/train.py configs/detr/detr_r50_8xb2-150e_city.py >logs/detr_city_train.logs 2>logs/detr_city_train.err&

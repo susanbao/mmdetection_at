@@ -167,8 +167,7 @@ class DETRHead(BaseModule):
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
 
-    def store_results(self, hidden_states, outs, batch_gt_instances, batch_img_metas):
-        split = "val"
+    def store_results(self, hidden_states, outs, batch_gt_instances, batch_img_metas, store_path = "DETR_COCO", split = "val"):
         json_data = {}
         json_data['feature'] = transform_tensors_to_list(hidden_states)
         json_data['pred_logits'] = transform_tensors_to_list(outs[0])
@@ -177,11 +176,11 @@ class DETRHead(BaseModule):
         json_data['gt_boxes'] = transform_tensors_to_list(batch_gt_instances[0]['bboxes'])
         json_data['img_metas'] = batch_img_metas
 
-        path = "./pro_data/detr_city"
+        path = "./pro_data/" + store_path
         self.create_folder_if_not_exists(path)
         path = os.path.join(path, split)
         self.create_folder_if_not_exists(path)
-        path = os.path.join(path, "output")
+        path = os.path.join(path, "outputs")
         self.create_folder_if_not_exists(path)
         path =  os.path.join(path, str(self._cnt) +".json")
         with open(path, "w") as outfile:
@@ -214,7 +213,7 @@ class DETRHead(BaseModule):
         outs = self(hidden_states)
         loss_inputs = outs + (batch_gt_instances, batch_img_metas)
         losses = self.loss_by_feat(*loss_inputs)
-        self.store_results(hidden_states, outs, batch_gt_instances, batch_img_metas)
+        self.store_results(hidden_states, outs, batch_gt_instances, batch_img_metas, split = "val")
         return losses
 
     def loss_by_feat(

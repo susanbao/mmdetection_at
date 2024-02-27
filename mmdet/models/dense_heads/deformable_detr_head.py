@@ -141,9 +141,17 @@ class DeformableDETRHead(DETRHead):
 
         return all_layers_outputs_classes, all_layers_outputs_coords
 
+
+    def _store_results(self, hidden_states, outs, batch_gt_instances, batch_img_metas, store_path = "DFDETR_COCO", split = "val"):
+        self.store_results(hidden_states, outs, batch_gt_instances, batch_img_metas, store_path, split)
+        
+    # def loss(self, hidden_states: Tensor, references: List[Tensor],
+             # enc_outputs_class: Tensor, enc_outputs_coord: Tensor,
+             # batch_data_samples = None: SampleList) -> dict:
+
     def loss(self, hidden_states: Tensor, references: List[Tensor],
-             enc_outputs_class: Tensor, enc_outputs_coord: Tensor,
-             batch_data_samples: SampleList) -> dict:
+             enc_outputs_class = None, enc_outputs_coord = None,
+             batch_data_samples = None) -> dict:
         """Perform forward propagation and loss calculation of the detection
         head on the queries of the upstream network.
 
@@ -185,6 +193,7 @@ class DeformableDETRHead(DETRHead):
         loss_inputs = outs + (enc_outputs_class, enc_outputs_coord,
                               batch_gt_instances, batch_img_metas)
         losses = self.loss_by_feat(*loss_inputs)
+        self._store_results(hidden_states, outs, batch_gt_instances, batch_img_metas, split="train")
         return losses
 
     def loss_by_feat(
