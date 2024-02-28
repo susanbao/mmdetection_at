@@ -123,6 +123,7 @@ data
 docs/modelzoo_statistics.md
 mmdet/.mim
 work_dirs/
+results/
 
 # Pytorch
 *.pth

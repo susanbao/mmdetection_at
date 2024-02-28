@@ -14,7 +14,7 @@ from mmdet.structures.bbox import (bbox_cxcywh_to_xyxy, bbox_overlaps,
 from torchvision.ops.boxes import box_area
 import torch.nn.functional as F
 
-score_threshold = 0.98
+# score_threshold = 0.5 DETR_COCO 0.98, DFDETR_COCO 0.5
 
 def box_iou(boxes1, boxes2):
     area1 = box_area(boxes1)
@@ -83,7 +83,7 @@ def hungarian_matching(out_logits, out_boxes, tgt_ids, tgt_bbox, cost_class_weig
     result = torch.argmin(C, axis=1)
     return result
 
-def get_indexes(out_logits):
+def get_indexes(out_logits, score_threshold):
     prob = out_logits.softmax(dim=1)
     prob, _ = prob.max(dim=1)
     select_mask = prob > score_threshold
@@ -93,6 +93,14 @@ def get_indexes(out_logits):
         print(f"Cannot find detected objects with score larger than {score_threshold}")
     else:
         indexes = select_mask.nonzero().reshape(-1)
+    return indexes
+
+def get_topk_indexes(out_logits, k):
+    k = min(k, out_logits.shape[0])
+    prob = out_logits.softmax(dim=1)
+    prob, _ = prob.max(dim=1)
+    score, indexes = prob.topk(k)
+    indexes,_ = torch.sort(indexes, dim=0)
     return indexes
 
 def sigmoid_focal_loss(inputs, targets, alpha: float = 0.25, gamma: float = 2):
@@ -156,9 +164,15 @@ def main():
                         help="Start No.")
     parser.add_argument("--count", type = int, default = 0,
                         help="Start count")
+    parser.add_argument("--query_nums", type = int, default = 100,
+                        help="Number of query")
+    parser.add_argument("--mode_data", type = str, default = "DETR_COCO",
+                        help="mode and dataset type")
+    parser.add_argument("--score_threshold", type = float, default = 0.98,
+                        help="score threshold")
     args = parser.parse_args()
     split = args.split
-    base_path = "./pro_data/detr/"
+    base_path = f"./pro_data/{args.mode_data}/"
     data_path = base_path + split + "/outputs/"
     feature_path = base_path + split + "/feature/"
     annotation_path = base_path + split + "/annotation/"
@@ -178,9 +192,13 @@ def main():
             print(f"{file_path} does not exits.")
             continue
         output_data = read_json_results(file_path)
-        feature = np.array(output_data['feature'][5][0])
-        out_logits = torch.FloatTensor(output_data['pred_logits'][5][0])
-        out_boxes = torch.FloatTensor(output_data['pred_boxes'][5][0])
+        # feature = np.array(output_data['feature'][5][0])
+        # out_logits = torch.FloatTensor(output_data['pred_logits'][5][0])
+        # out_boxes = torch.FloatTensor(output_data['pred_boxes'][5][0])
+        feature = np.array(output_data['feature'])
+        out_logits = torch.FloatTensor(output_data['pred_logits'])
+        out_boxes = torch.FloatTensor(output_data['pred_boxes'])
+        out_logits = out_logits[:, 0:80] # for detr & coco
         target_labels = output_data['gt_labels']
         target_boxes = torch.FloatTensor(output_data['gt_boxes'])
         if len(target_boxes) == 0:
@@ -190,8 +208,13 @@ def main():
         factors = output_data['img_metas'][0]['scale_factor']
         shapes = torch.FloatTensor([img_h, img_w, img_h, img_w])
         target_boxes = target_boxes / shapes
-        out_logits = out_logits[:, 0:80] # for detr & coco
-        indexes = get_indexes(out_logits)
+
+        selected_indexes = get_topk_indexes(out_logits, args.query_nums)
+        feature = feature[selected_indexes]
+        out_logits = out_logits[selected_indexes]
+        out_boxes = out_boxes[selected_indexes]
+        
+        indexes = get_indexes(out_logits, args.score_threshold)
         out_logits = out_logits[indexes]
         out_boxes = out_boxes[indexes]
         gt_indexes = hungarian_matching(out_logits, out_boxes, target_labels, target_boxes)
