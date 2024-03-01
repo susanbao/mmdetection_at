@@ -169,9 +169,9 @@ class DETRHead(BaseModule):
 
     def store_results(self, hidden_states, outs, batch_gt_instances, batch_img_metas, store_path = "DETR_COCO", split = "val"):
         json_data = {}
-        json_data['feature'] = transform_tensors_to_list(hidden_states)
-        json_data['pred_logits'] = transform_tensors_to_list(outs[0])
-        json_data['pred_boxes'] = transform_tensors_to_list(outs[1])
+        json_data['feature'] = transform_tensors_to_list(hidden_states[-1,0])
+        json_data['pred_logits'] = transform_tensors_to_list(outs[0][-1,0])
+        json_data['pred_boxes'] = transform_tensors_to_list(outs[1][-1,0])
         json_data['gt_labels'] = transform_tensors_to_list(batch_gt_instances[0]['labels'])
         json_data['gt_boxes'] = transform_tensors_to_list(batch_gt_instances[0]['bboxes'])
         json_data['img_metas'] = batch_img_metas
