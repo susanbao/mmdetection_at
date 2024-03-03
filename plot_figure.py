@@ -112,7 +112,7 @@ def read_baseline_data(data_path):
     return none_swin_data["0"]
 
 def take_data_for_defined_point(model_dataset, steps, image_path, result_path, level):
-    if model_dataset[-1] == "0":
+    if model_dataset[-1].isnumeric():
         model_origin_folder = "_".join(model_dataset.split("_")[:-1])
     else:
         model_origin_folder = model_dataset
@@ -152,7 +152,7 @@ def print_mean_std(path, test_whole_data, sample_size_threshold):
 
 def show_all_methods_mean_std(model_dataset, steps, image_path, result_path, level):
     global temp_list, result_pd
-    if model_dataset[-1] == "0":
+    if model_dataset[-1].isnumeric():
         model_origin_folder = "_".join(model_dataset.split("_")[:-1])
     else:
         model_origin_folder = model_dataset
@@ -172,10 +172,8 @@ def compute_average_std(std):
 method_dict = {"random sample": "Random Sample", "ViT all": "our ViTAL"}
 result_pd = {}
 temp_list = []
-min_size_p = 0.01
-max_size_p = 0.1
 def take_image_data_for_one_model_dataset(model_dataset, steps = 10000):
-    if model_dataset[-1] == "0":
+    if model_dataset[-1].isnumeric():
         model_origin_folder = model_dataset[:-3]
     else:
         model_origin_folder = model_dataset
@@ -199,11 +197,10 @@ def take_image_data_for_defined_point(model_dataset, steps = 10000):
 def show_image_all_methods_mean_std(model_dataset, steps = 10000):
     show_all_methods_mean_std(model_dataset, steps, "image_true_losses.npy", "image_based_active_testing", "all")
 
-min_size_p = 0.001
-max_size_p = 0.01
+
 
 def take_region_data_for_one_model_dataset(model_dataset, steps = 10000):
-    if model_dataset[-1] == "0":
+    if model_dataset[-1].isnumeric():
         model_origin_folder = "_".join(model_dataset.split("_")[:-1])
     else:
         model_origin_folder = model_dataset
@@ -226,21 +223,30 @@ def take_region_data_for_defined_point(model_dataset,  steps = 10000):
 
 def show_region_all_methods_mean_std(model_dataset, steps = 10000):
     show_all_methods_mean_std(model_dataset, steps, "region_true_losses.npy", "region_based_active_testing", "all")
-    
-# dataset_model = "DFDETR_COCO"
+
+min_size_p = 0.01
+max_size_p = 0.1
+
+# dataset_model = "DETR_COCO"
 # step_array = np.arange(10000, 100001, 10000)
+# # step_array = np.arange(10000, 70001, 10000)
 # for step in step_array:
 #     show_image_all_methods_mean_std(dataset_model, step)
 
 # results = take_image_data_for_defined_point("DETR_COCO", 50000)
-results = take_image_data_for_defined_point("DFDETR_COCO", 30000)
-plot_figure(results, "Image_DFDETR_COCO")
+# results = pd.concat([results, take_image_data_for_defined_point("DFDETR_COCO_32", 50000)], ignore_index=True)
+# results = pd.concat([results, take_image_data_for_defined_point("DINO_COCO", 50000)], ignore_index=True)
+# plot_figure(results, "Det_Image_COCO")
 # plot_figure(results)
 
-# dataset_model = "DFDETR_COCO"
+min_size_p = 0.01
+max_size_p = 0.05
+dataset_model = "DINO_COCO"
 # step_array = np.arange(10000, 100001, 10000)
-# for step in step_array:
-#     show_region_all_methods_mean_std(dataset_model, step)
+step_array = np.arange(10000, 70001, 10000)
+for step in step_array:
+    show_region_all_methods_mean_std(dataset_model, step)
 
-# results = take_region_data_for_defined_point("DFDETR_COCO",  50000)
+# results = take_image_data_for_defined_point("DETR_COCO", 20000)
+# results = pd.concat([results, take_image_data_for_defined_point("DFDETR_COCO_32", 40000)], ignore_index=True)
 # plot_figure(results, "Region_DFDETR_COCO")
