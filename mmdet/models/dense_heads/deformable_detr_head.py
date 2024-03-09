@@ -146,9 +146,8 @@ class DeformableDETRHead(DETRHead):
         self.store_results(hidden_states, outs, batch_gt_instances, batch_img_metas, store_path, split)
         
     # def loss(self, hidden_states: Tensor, references: List[Tensor],
-             # enc_outputs_class: Tensor, enc_outputs_coord: Tensor,
-             # batch_data_samples = None: SampleList) -> dict:
-
+    #          enc_outputs_class: Tensor, enc_outputs_coord: Tensor,
+    #          batch_data_samples: SampleList) -> dict:
     def loss(self, hidden_states: Tensor, references: List[Tensor],
              enc_outputs_class = None, enc_outputs_coord = None,
              batch_data_samples = None) -> dict:
@@ -193,7 +192,7 @@ class DeformableDETRHead(DETRHead):
         loss_inputs = outs + (enc_outputs_class, enc_outputs_coord,
                               batch_gt_instances, batch_img_metas)
         losses = self.loss_by_feat(*loss_inputs)
-        self._store_results(hidden_states, outs, batch_gt_instances, batch_img_metas, split="train")
+        self._store_results(hidden_states, outs, batch_gt_instances, batch_img_metas, store_path = "DFDETR_CITY", split="val")
         return losses
 
     def loss_by_feat(

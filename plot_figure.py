@@ -7,6 +7,7 @@ import seaborn as sns
 import re
 import copy
 from tools.utils_at import *
+import ipdb
 
 method_dict = {"MC": "Random Sample","random sample": "Random Sample", "surr ensemble": "ASE Class Score 0", "ASE": "ASE Class Score 0", "ASE_regression": "ASE Regression Score 0", 
                "ASE_all": "ASE All Score 0", "ASE_class_score_1": "ASE Class Score -1", "ASE_reg_score_1": "ASE Regression Score -1", "ASE_all_score_1": "ASE All Score -1", "MPL": "MPL"}
@@ -66,11 +67,10 @@ def find_max_difference_with_each_baselines(results):
     rs = results[results["active_test_type"] == "Random Sample"]["loss"].values.reshape((-1,3)).mean(axis=1)
     ours = results[results["active_test_type"] == "our ViTAL"]["loss"].values.reshape((3,-1)).mean(axis=0)
     sample_size = results[results["active_test_type"] == "Random Sample"]["sample_size"].values.reshape((-1,3))[:,0]
-    diff = np.expand_dims((1 - ours/rs), axis=0)
-    diff_min = diff.min(axis=0)
-    diff_min_max = diff_min.max()
-    loc = sample_size[diff_min.argmax()]
-    print(f"Max reducation compared with all approach: {diff_min_max:.2f}, loc : {loc}, ours: {ours[diff_min.argmax()]}, rs: {rs[diff_min.argmax()]}")    
+    diff = (1 - ours/rs)
+    diff_min_max = diff.max()
+    loc = sample_size[diff.argmax()]
+    print(f"Max reducation compared with all approach: {diff_min_max:.2f}, loc : {loc}, ours: {ours[diff.argmax()]}, rs: {rs[diff.argmax()]}")    
     
 def plot_figure(data, pic_name=None, x_label_name = "% of Acquired Labels", find_dff=False):
     y_metric = "loss"
@@ -154,6 +154,8 @@ def show_all_methods_mean_std(model_dataset, steps, image_path, result_path, lev
     global temp_list, result_pd
     if model_dataset[-1].isnumeric():
         model_origin_folder = "_".join(model_dataset.split("_")[:-1])
+    elif model_dataset.split("_")[-1] == "image" or model_dataset.split("_")[-2] == "image":
+        model_origin_folder = "_".join(model_dataset.split("_")[:2])
     else:
         model_origin_folder = model_dataset
     base_path = f"./pro_data/{model_origin_folder}/val/"
@@ -224,29 +226,97 @@ def take_region_data_for_defined_point(model_dataset,  steps = 10000):
 def show_region_all_methods_mean_std(model_dataset, steps = 10000):
     show_all_methods_mean_std(model_dataset, steps, "region_true_losses.npy", "region_based_active_testing", "all")
 
-min_size_p = 0.01
-max_size_p = 0.1
+min_size_p = 0.001
+max_size_p = 0.04
 
-# dataset_model = "DETR_COCO"
-# step_array = np.arange(10000, 100001, 10000)
-# # step_array = np.arange(10000, 70001, 10000)
-# for step in step_array:
-#     show_image_all_methods_mean_std(dataset_model, step)
+if False:
+    dataset_model = "DETR_COCO"
+    step_array = np.arange(10000, 100001, 10000)
+    # step_array = np.arange(10000, 70001, 10000)
+    for step in step_array:
+        show_image_all_methods_mean_std(dataset_model, step)
+    
+    dataset_model = "DFDETR_COCO_32"
+    step_array = np.arange(10000, 70001, 10000)
+    for step in step_array:
+        show_image_all_methods_mean_std(dataset_model, step)
+    
+    dataset_model = "DINO_COCO"
+    step_array = np.arange(10000, 70001, 10000)
+    for step in step_array:
+        show_image_all_methods_mean_std(dataset_model, step)
 
-# results = take_image_data_for_defined_point("DETR_COCO", 50000)
-# results = pd.concat([results, take_image_data_for_defined_point("DFDETR_COCO_32", 50000)], ignore_index=True)
-# results = pd.concat([results, take_image_data_for_defined_point("DINO_COCO", 50000)], ignore_index=True)
-# plot_figure(results, "Det_Image_COCO")
-# plot_figure(results)
+if False:
+    dataset_model = "DETR_COCO_image"
+    step_array = np.arange(10000, 50001, 10000)
+    for step in step_array:
+        show_image_all_methods_mean_std(dataset_model, step)
 
-min_size_p = 0.01
-max_size_p = 0.05
-dataset_model = "DINO_COCO"
-# step_array = np.arange(10000, 100001, 10000)
-step_array = np.arange(10000, 70001, 10000)
-for step in step_array:
-    show_region_all_methods_mean_std(dataset_model, step)
+    dataset_model = "DETR_COCO_image_nobin"
+    for step in step_array:
+        show_image_all_methods_mean_std(dataset_model, step)
 
-# results = take_image_data_for_defined_point("DETR_COCO", 20000)
-# results = pd.concat([results, take_image_data_for_defined_point("DFDETR_COCO_32", 40000)], ignore_index=True)
-# plot_figure(results, "Region_DFDETR_COCO")
+    dataset_model = "DETR_COCO_image_resnet"
+    for step in step_array:
+        show_image_all_methods_mean_std(dataset_model, step)
+
+    dataset_model = "DETR_COCO_image_MLP"
+    for step in step_array:
+        show_image_all_methods_mean_std(dataset_model, step)
+
+# ipdb.set_trace()
+if True:
+    detr = take_image_data_for_defined_point("DETR_COCO", 50000)
+    dfdetr = take_image_data_for_defined_point("DFDETR_COCO_32", 30000)
+    dino = take_image_data_for_defined_point("DINO_COCO", 50000)
+    dino['sample_size'] = detr['sample_size']
+
+    plot_figure(detr, "Det_DETR_COCO_Image", find_dff = True)
+    plot_figure(dfdetr, "Det_DFDETR_COCO_Image", find_dff = True)
+    plot_figure(dino, "Det_DINO_COCO_Image", find_dff = True)
+    
+if False:
+    detr = take_image_data_for_defined_point("DETR_COCO", 50000)
+    dfdetr = take_image_data_for_defined_point("DFDETR_COCO_32", 30000)
+    dino = take_image_data_for_defined_point("DINO_COCO", 50000)
+    dino['sample_size'] = detr['sample_size']
+    results =  pd.concat([detr, dfdetr, dino], ignore_index=True)
+    plot_figure(results, "Det_COCO_Image", find_dff = True)
+
+min_size_p = 0.001
+max_size_p = 0.01
+if False:
+    dataset_model = "DETR_COCO"
+    step_array = np.arange(10000, 100001, 10000)
+    for step in step_array:
+        show_region_all_methods_mean_std(dataset_model, step)
+    
+    dataset_model = "DFDETR_COCO_32"
+    step_array = np.arange(10000, 70001, 10000)
+    for step in step_array:
+        show_region_all_methods_mean_std(dataset_model, step)
+    
+    dataset_model = "DINO_COCO"
+    step_array = np.arange(10000, 70001, 10000)
+    for step in step_array:
+        show_region_all_methods_mean_std(dataset_model, step)
+
+if True:
+    detr = take_region_data_for_defined_point("DETR_COCO", 20000)
+    dfdetr = take_region_data_for_defined_point("DFDETR_COCO_32", 60000)
+    dino = take_region_data_for_defined_point("DINO_COCO", 40000)
+    dfdetr['sample_size'] = detr['sample_size']
+    dino['sample_size'] = detr['sample_size']
+    
+    plot_figure(detr, "Det_DETR_COCO_Region", find_dff = True)
+    plot_figure(dfdetr, "Det_DFDETR_COCO_Region", find_dff = True)
+    plot_figure(dino, "Det_DINO_COCO_Region", find_dff = True)
+
+if False:
+    detr = take_region_data_for_defined_point("DETR_COCO", 20000)
+    dfdetr = take_region_data_for_defined_point("DFDETR_COCO_32", 60000)
+    dino = take_region_data_for_defined_point("DINO_COCO", 40000)
+    dfdetr['sample_size'] = detr['sample_size']
+    dino['sample_size'] = detr['sample_size']
+    results =  pd.concat([detr, dfdetr, dino], ignore_index=True)
+    plot_figure(results, "Det_COCO_Region", find_dff = True)

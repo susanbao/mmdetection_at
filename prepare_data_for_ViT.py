@@ -172,8 +172,11 @@ def main():
                         help="score threshold")
     args = parser.parse_args()
     split = args.split
+    model_origin_folder = args.mode_data
+    if model_origin_folder[-1].isnumeric():
+        model_origin_folder = "_".join(model_origin_folder.split("_")[:-1])
     base_path = f"./pro_data/{args.mode_data}/"
-    data_path = base_path + split + "/outputs/"
+    data_path = f"./pro_data/{model_origin_folder}/" + split + "/outputs/"
     feature_path = base_path + split + "/feature/"
     annotation_path = base_path + split + "/annotation/"
     create_folder_if_not_exists(feature_path)
@@ -209,10 +212,11 @@ def main():
         shapes = torch.FloatTensor([img_h, img_w, img_h, img_w])
         target_boxes = target_boxes / shapes
 
-        selected_indexes = get_topk_indexes(out_logits, args.query_nums)
-        feature = feature[selected_indexes]
-        out_logits = out_logits[selected_indexes]
-        out_boxes = out_boxes[selected_indexes]
+        if args.query_nums < out_logits.shape[0]:
+            selected_indexes = get_topk_indexes(out_logits, args.query_nums)
+            feature = feature[selected_indexes]
+            out_logits = out_logits[selected_indexes]
+            out_boxes = out_boxes[selected_indexes]
         
         indexes = get_indexes(out_logits, args.score_threshold)
         out_logits = out_logits[indexes]

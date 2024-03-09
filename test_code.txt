@@ -10,7 +10,13 @@ python tools/dataset_converters/cityscapes.py ./data/cityscapes --nproc 8 --out-
 train a detr model on cityescapes:
 CUDA_VISIBLE_DEVICES=0 python tools/train.py configs/detr/detr_r50_8xb2-150e_city.py >logs/detr_city_train.logs 2>logs/detr_city_train.err&
 
-python tools/test.py ./configs/detr/detr_r50_8xb2-150e_city.py ./work_dirs/detr_r50_8xb2-150e_city/epoch_4.pth
+python tools/test.py ./configs/detr/detr_r50_8xb2-150e_city.py ./work_dirs/detr_r50_8xb2-150e_city/epoch_7.pth
+
+CUDA_VISIBLE_DEVICES=0 python tools/train.py configs/deformable_detr/deformable-detr_r50_16xb2-50e_city.py >logs/dfdetr_city_train.logs 2>logs/dfdetr_city_train.err&
+
+python tools/test.py ./configs/deformable_detr/deformable-detr_r50_16xb2-50e_city.py ./work_dirs/deformable-detr_r50_16xb2-50e_city/epoch_1.pth
+
+CUDA_VISIBLE_DEVICES=0 python tools/train.py configs/detr/detr_r50_8xb2-150e_voc.py >logs/detr_voc_train.logs 2>logs/detr_voc_train.err&
 
 prepare data:
 python prepare_data_for_ViT.py --split train >logs/prepare_detr_train_data.logs 2>logs/prepare_detr_train_data.err&
@@ -21,3 +27,12 @@ python prepare_data_for_ViT.py --split train --mode_data DFDETR_COCO --score_thr
 
 python prepare_data_for_ViT.py --split val --mode_data DINO_COCO --score_threshold 0.4 --query_nums 196
 python prepare_data_for_ViT.py --split train --mode_data DINO_COCO --score_threshold 0.4 --query_nums 196 >logs/pre_dino_train.logs 2>logs/pre_dino_train.err&
+
+python prepare_data_for_ViT.py --split val --mode_data DFDETR_COCO_100 --score_threshold 0.5 --query_nums 100
+python prepare_data_for_ViT.py --split train --mode_data DFDETR_COCO_100 --score_threshold 0.5 --query_nums 100
+
+python prepare_data_for_ViT.py --split val --mode_data DFDETR_COCO_289 --score_threshold 0.5 --query_nums 289
+python prepare_data_for_ViT.py --split train --mode_data DFDETR_COCO_289 --score_threshold 0.5 --query_nums 289
+
+Active Testing
+python active_testing.py --model_data_type DETR_COCO --data_type image --ck_nums 10

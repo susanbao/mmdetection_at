@@ -8,6 +8,7 @@ from mmengine.registry import RUNNERS
 from mmengine.runner import Runner
 
 from mmdet.utils import setup_cache_size_limit_of_dynamo
+import ipdb
 
 
 def parse_args():
@@ -104,6 +105,7 @@ def main():
         cfg.resume = True
         cfg.load_from = args.resume
 
+    # ipdb.set_trace()
     # build the runner from config
     if 'runner_type' not in cfg:
         # build the default runner

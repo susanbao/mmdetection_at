@@ -27,12 +27,12 @@ class DINOHead(DeformableDETRHead):
     <https://arxiv.org/abs/2203.03605>`_ .
     """
 
-    # def loss(self, hidden_states: Tensor, references: List[Tensor],
-             # enc_outputs_class: Tensor, enc_outputs_coord: Tensor,
-             # batch_data_samples: SampleList, dn_meta: Dict[str, int]) -> dict:
     def loss(self, hidden_states: Tensor, references: List[Tensor],
-             enc_outputs_class=None, enc_outputs_coord=None,
-             batch_data_samples=None, dn_meta=None) -> dict:
+             enc_outputs_class: Tensor, enc_outputs_coord: Tensor,
+             batch_data_samples: SampleList, dn_meta: Dict[str, int]) -> dict:
+    # def loss(self, hidden_states: Tensor, references: List[Tensor],
+    #          enc_outputs_class=None, enc_outputs_coord=None,
+    #          batch_data_samples=None, dn_meta=None) -> dict:
         """Perform forward propagation and loss calculation of the detection
         head on the queries of the upstream network.
 
@@ -74,9 +74,9 @@ class DINOHead(DeformableDETRHead):
         outs = self(hidden_states, references)
         loss_inputs = outs + (enc_outputs_class, enc_outputs_coord,
                               batch_gt_instances, batch_img_metas, dn_meta)
-        # losses = self.loss_by_feat(*loss_inputs)
-        losses = 0
-        self._store_results(hidden_states, outs, batch_gt_instances, batch_img_metas, store_path = "DINO_COCO", split="train")
+        losses = self.loss_by_feat(*loss_inputs)
+        # losses = 0
+        # self._store_results(hidden_states, outs, batch_gt_instances, batch_img_metas, store_path = "DINO_COCO", split="train")
         return losses
 
     def loss_by_feat(

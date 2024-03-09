@@ -127,13 +127,13 @@ train_dataloader = dict(dataset=dict(dataset=dict(pipeline=train_pipeline)))
 # optimizer
 optim_wrapper = dict(
     type='OptimWrapper',
-    optimizer=dict(type='AdamW', lr=0.001, weight_decay=0.001),
+    optimizer=dict(type='Adam', lr=0.01, weight_decay=0.001),
     clip_grad=dict(max_norm=0.1, norm_type=2),
     paramwise_cfg=dict(
         custom_keys={'backbone': dict(lr_mult=0.1, decay_mult=1.0)}))
 
 # learning policy
-max_epochs = 50 #150
+max_epochs = 10 #150
 train_cfg = dict(
     type='EpochBasedTrainLoop', max_epochs=max_epochs, val_interval=1)
 val_cfg = dict(type='ValLoop')
@@ -149,10 +149,13 @@ param_scheduler = [
         gamma=0.1)
 ]
 
+load_from = "/media/xinli/active/mmdetection_at/checkpoints/detr_r50_8xb2-150e_coco_20221023_153551-436d03e8.pth"
+
 # NOTE: `auto_scale_lr` is for automatically scaling LR,
 # USER SHOULD NOT CHANGE ITS VALUES.
 # base_batch_size = (8 GPUs) x (2 samples per GPU)
-auto_scale_lr = dict(base_batch_size=16)
+# auto_scale_lr = dict(base_batch_size=16)
+auto_scale_lr = dict(base_batch_size=128, enable=False)
 
 vis_backends = [
     dict(type='WandbVisBackend',

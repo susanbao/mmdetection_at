@@ -53,7 +53,7 @@ train_dataloader = dict(
                 dict(
                     type=dataset_type,
                     data_root=data_root,
-                    ann_file='VOC2007/ImageSets/Main/trainval.txt',
+                    ann_file='VOC2007/ImageSets/Main/train.txt',
                     data_prefix=dict(sub_data_root='VOC2007/'),
                     filter_cfg=dict(
                         filter_empty_gt=True, min_size=32, bbox_min_size=32),
@@ -62,7 +62,7 @@ train_dataloader = dict(
                 dict(
                     type=dataset_type,
                     data_root=data_root,
-                    ann_file='VOC2012/ImageSets/Main/trainval.txt',
+                    ann_file='VOC2012/ImageSets/Main/train.txt',
                     data_prefix=dict(sub_data_root='VOC2012/'),
                     filter_cfg=dict(
                         filter_empty_gt=True, min_size=32, bbox_min_size=32),
@@ -79,7 +79,7 @@ val_dataloader = dict(
     dataset=dict(
         type=dataset_type,
         data_root=data_root,
-        ann_file='VOC2007/ImageSets/Main/test.txt',
+        ann_file='VOC2007/ImageSets/Main/val.txt',
         data_prefix=dict(sub_data_root='VOC2007/'),
         test_mode=True,
         pipeline=test_pipeline,

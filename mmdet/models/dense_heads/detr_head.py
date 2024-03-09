@@ -213,7 +213,7 @@ class DETRHead(BaseModule):
         outs = self(hidden_states)
         loss_inputs = outs + (batch_gt_instances, batch_img_metas)
         losses = self.loss_by_feat(*loss_inputs)
-        self.store_results(hidden_states, outs, batch_gt_instances, batch_img_metas, split = "val")
+        # self.store_results(hidden_states, outs, batch_gt_instances, batch_img_metas, store_path = "DETR_CITY", split = "val")
         return losses
 
     def loss_by_feat(
