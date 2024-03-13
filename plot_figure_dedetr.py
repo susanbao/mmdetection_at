@@ -229,7 +229,7 @@ def show_region_all_methods_mean_std(model_dataset, steps = 10000):
 min_size_p = 0.001
 max_size_p = 0.1
 
-if True:
+if False:
     dataset_model = "DETR_CITY"
     step_array = np.arange(1000, 10001, 1000)
     # step_array = np.arange(10000, 70001, 10000)
@@ -254,6 +254,7 @@ if True:
     dfdetr['sample_size'] = detr['sample_size']
     dino['sample_size'] = detr['sample_size']
 
+    print("Image")
     plot_figure(detr, "Det_DETR_CITY_Image", find_dff = True)
     plot_figure(dfdetr, "Det_DEDETR_CITY_Image", find_dff = True)
     plot_figure(dino, "Det_DELADETR_CITY_Image", find_dff = True)
@@ -285,18 +286,19 @@ if False:
     for step in step_array:
         show_region_all_methods_mean_std(dataset_model, step)
 
-if False:
+if True:
     detr = take_region_data_for_defined_point("DETR_CITY", 2000)
     dfdetr = take_region_data_for_defined_point("DEDETR_CITY", 3000)
     dino = take_region_data_for_defined_point("DELADETR_CITY", 8000)
     dfdetr['sample_size'] = detr['sample_size']
     dino['sample_size'] = detr['sample_size']
     
+    print("Region")
     plot_figure(detr, "Det_DETR_CITY_Region", find_dff = True)
     plot_figure(dfdetr, "Det_DEDETR_CITY_Region", find_dff = True)
     plot_figure(dino, "Det_DELADETR_CITY_Region", find_dff = True)
 
-if False:
+if True:
     detr = take_region_data_for_defined_point("DETR_CITY", 2000)
     dfdetr = take_region_data_for_defined_point("DEDETR_CITY", 3000)
     dino = take_region_data_for_defined_point("DELADETR_CITY", 8000)
