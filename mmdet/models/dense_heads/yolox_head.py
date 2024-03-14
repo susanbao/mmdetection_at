@@ -20,7 +20,39 @@ from ..task_modules.prior_generators import MlvlPointGenerator
 from ..task_modules.samplers import PseudoSampler
 from ..utils import multi_apply
 from .base_dense_head import BaseDenseHead
+import json
+import os
+import numpy as np
 
+def np_write(data, file):
+    with open(file, "wb") as outfile:
+        np.save(outfile, data)
+
+def create_folder_if_not_exists(folder_path):
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+
+def write_json_results(json_data, path):
+    with open(path, "w") as outfile:
+        json.dump(json_data, outfile)
+
+def transform_tensor_to_list(l):
+    return l.cpu().tolist()
+
+def transform_tensors_to_list(l):
+    if torch.is_tensor(l):
+        return transform_tensor_to_list(l)
+    if isinstance(l, list):
+        r = []
+        for i in l:
+            r.append(transform_tensors_to_list(i))
+        return r
+    if isinstance(l, dict):
+        r = {}
+        for k,v in l.items():
+            r[k] = transform_tensors_to_list(v)
+        return r
+    return l
 
 @MODELS.register_module()
 class YOLOXHead(BaseDenseHead):
@@ -139,6 +171,7 @@ class YOLOXHead(BaseDenseHead):
             self.sampler = PseudoSampler()
 
         self._init_layers()
+        self._cnt = 0
 
     def _init_layers(self) -> None:
         """Initialize heads for all level feature maps."""
@@ -396,6 +429,63 @@ class YOLOXHead(BaseDenseHead):
             results.scores = det_bboxes[:, -1]
         return results
 
+
+    def store_results(self, flatten_cls_preds, flatten_bbox_preds, flatten_objectness, cls_targets, obj_targets, bbox_targets, pos_masks, store_path = "YOLOX_COCO", split = "val"):
+        patch_size = 196
+        path = "./pro_data/" + store_path
+        create_folder_if_not_exists(path)
+        path = os.path.join(path, split)
+        create_folder_if_not_exists(path)
+        feature_path = os.path.join(path, "feature/")
+        create_folder_if_not_exists(feature_path)
+        annotation_path = os.path.join(path, "annotation/")
+        create_folder_if_not_exists(annotation_path)
+        batch_size = flatten_cls_preds.shape[0]
+        for i in range(batch_size):
+            flatten_cls_pred = flatten_cls_preds[i]
+            flatten_bbox_pred = flatten_bbox_preds[i]
+            flatten_objectnes = flatten_objectness[i]
+            cls_target = cls_targets[i]
+            obj_target = obj_targets[i]
+            bbox_target = bbox_targets[i]
+            pos_mask = pos_masks[i]
+
+            length = pos_mask.sum()
+            if length == 0:
+                continue
+            if length > patch_size:
+                continue
+            loss = torch.zeros(length, device = flatten_cls_pred.device)
+            cls_pred = flatten_cls_pred[pos_mask]
+            bbox_pred = flatten_bbox_pred[pos_mask]
+            objectnes = flatten_objectnes[pos_mask]
+            for i in range(length):
+                loss[i] = self.loss_obj(objectnes[i].unsqueeze(0).unsqueeze(0), obj_target[i].unsqueeze(0))
+                loss[i] += self.loss_cls(cls_pred[i], cls_target[i])
+                loss[i] += self.loss_bbox(bbox_pred[i].unsqueeze(0), bbox_target[i].unsqueeze(0))
+            feature_size = flatten_cls_pred.shape[1] + flatten_bbox_pred.shape[1] + 1
+            feature = torch.zeros(patch_size, feature_size, device = objectnes.device)
+            feature[:length] = torch.cat((objectnes.unsqueeze(1), bbox_pred, cls_pred), 1)
+            if length < patch_size:
+                topk = patch_size - length
+                pos_mask_neg = torch.logical_not(pos_mask)
+                objectnes_neg = flatten_objectnes[pos_mask_neg]
+                cls_pred_neg = flatten_cls_pred[pos_mask_neg]
+                bbox_pred_neg = flatten_bbox_pred[pos_mask_neg]
+                score, indexes = objectnes_neg.topk(topk)
+                indexes,_ = torch.sort(indexes, dim=0)
+                objectnes_neg = objectnes_neg[indexes]
+                cls_pred_neg = cls_pred_neg[indexes]
+                bbox_pred_neg = bbox_pred_neg[indexes]
+                feature[length:] = torch.cat((objectnes_neg.unsqueeze(1), bbox_pred_neg, cls_pred_neg), 1)
+
+            json_data = {}
+            json_data['loss'] = transform_tensors_to_list(loss)
+            json_data['index'] = transform_tensors_to_list(torch.arange(length))
+            write_json_results(json_data, annotation_path + str(self._cnt) + ".json")
+            np_write(feature.cpu().numpy(), feature_path + str(self._cnt) + ".npy")
+            self._cnt += 1
+            
     def loss_by_feat(
             self,
             cls_scores: Sequence[Tensor],
@@ -476,6 +566,8 @@ class YOLOXHead(BaseDenseHead):
             device=flatten_cls_preds.device)
         num_total_samples = max(reduce_mean(num_pos), 1.0)
 
+        self.store_results(flatten_cls_preds, flatten_bbox_preds, flatten_objectness, cls_targets, obj_targets, bbox_targets, pos_masks, store_path = "YOLOX_COCO", split = "train")
+        
         pos_masks = torch.cat(pos_masks, 0)
         cls_targets = torch.cat(cls_targets, 0)
         obj_targets = torch.cat(obj_targets, 0)

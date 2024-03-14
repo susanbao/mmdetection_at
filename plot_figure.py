@@ -226,8 +226,21 @@ def take_region_data_for_defined_point(model_dataset,  steps = 10000):
 def show_region_all_methods_mean_std(model_dataset, steps = 10000):
     show_all_methods_mean_std(model_dataset, steps, "region_true_losses.npy", "region_based_active_testing", "all")
 
+# min_size_p = 0.001
+# max_size_p = 0.04
+
 min_size_p = 0.001
-max_size_p = 0.04
+max_size_p = 0.01
+
+if True:
+    dataset_model = "YOLOX_COCO"
+    step_array = np.arange(10000, 100001, 10000)
+    for step in step_array:
+        show_image_all_methods_mean_std(dataset_model, step)
+
+if True:
+    yolo = take_image_data_for_defined_point("YOLOX_COCO", 30000)
+    plot_figure(yolo, "Det_YOLOX_COCO_Image", find_dff = True)
 
 if False:
     dataset_model = "DETR_COCO"
@@ -265,7 +278,7 @@ if False:
         show_image_all_methods_mean_std(dataset_model, step)
 
 # ipdb.set_trace()
-if True:
+if False:
     detr = take_image_data_for_defined_point("DETR_COCO", 50000)
     dfdetr = take_image_data_for_defined_point("DFDETR_COCO_32", 30000)
     dino = take_image_data_for_defined_point("DINO_COCO", 50000)
@@ -283,8 +296,22 @@ if False:
     results =  pd.concat([detr, dfdetr, dino], ignore_index=True)
     plot_figure(results, "Det_COCO_Image", find_dff = True)
 
-min_size_p = 0.001
-max_size_p = 0.01
+# min_size_p = 0.001
+# max_size_p = 0.01
+
+min_size_p = 0.0001
+max_size_p = 0.001
+
+if True:
+    dataset_model = "YOLOX_COCO"
+    step_array = np.arange(10000, 100001, 10000)
+    for step in step_array:
+        show_region_all_methods_mean_std(dataset_model, step)
+
+if True:
+    yolo = take_region_data_for_defined_point("YOLOX_COCO", 10000)
+    plot_figure(yolo, "Det_YOLOX_COCO_Region", find_dff = True)
+
 if False:
     dataset_model = "DETR_COCO"
     step_array = np.arange(10000, 100001, 10000)
@@ -301,7 +328,7 @@ if False:
     for step in step_array:
         show_region_all_methods_mean_std(dataset_model, step)
 
-if True:
+if False:
     detr = take_region_data_for_defined_point("DETR_COCO", 20000)
     dfdetr = take_region_data_for_defined_point("DFDETR_COCO_32", 60000)
     dino = take_region_data_for_defined_point("DINO_COCO", 40000)
