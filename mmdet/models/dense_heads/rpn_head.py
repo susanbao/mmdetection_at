@@ -16,7 +16,39 @@ from mmdet.structures.bbox import (cat_boxes, empty_box_as, get_box_tensor,
                                    get_box_wh, scale_boxes)
 from mmdet.utils import InstanceList, MultiConfig, OptInstanceList
 from .anchor_head import AnchorHead
+import json
+import os
+import numpy as np
 
+def np_write(data, file):
+    with open(file, "wb") as outfile:
+        np.save(outfile, data)
+
+def create_folder_if_not_exists(folder_path):
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+
+def write_json_results(json_data, path):
+    with open(path, "w") as outfile:
+        json.dump(json_data, outfile)
+
+def transform_tensor_to_list(l):
+    return l.cpu().tolist()
+
+def transform_tensors_to_list(l):
+    if torch.is_tensor(l):
+        return transform_tensor_to_list(l)
+    if isinstance(l, list):
+        r = []
+        for i in l:
+            r.append(transform_tensors_to_list(i))
+        return r
+    if isinstance(l, dict):
+        r = {}
+        for k,v in l.items():
+            r[k] = transform_tensors_to_list(v)
+        return r
+    return l
 
 @MODELS.register_module()
 class RPNHead(AnchorHead):

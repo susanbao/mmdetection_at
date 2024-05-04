@@ -9,11 +9,44 @@ from torch import Tensor
 
 from mmdet.registry import MODELS, TASK_UTILS
 from mmdet.utils import ConfigType, InstanceList, MultiConfig, OptInstanceList
-from ..losses import smooth_l1_loss
+from ..losses import smooth_l1_loss, SmoothL1Loss
 from ..task_modules.samplers import PseudoSampler
 from ..utils import multi_apply
 from .anchor_head import AnchorHead
 
+import json
+import os
+import numpy as np
+
+def np_write(data, file):
+    with open(file, "wb") as outfile:
+        np.save(outfile, data)
+
+def create_folder_if_not_exists(folder_path):
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+
+def write_json_results(json_data, path):
+    with open(path, "w") as outfile:
+        json.dump(json_data, outfile)
+
+def transform_tensor_to_list(l):
+    return l.cpu().tolist()
+
+def transform_tensors_to_list(l):
+    if torch.is_tensor(l):
+        return transform_tensor_to_list(l)
+    if isinstance(l, list):
+        r = []
+        for i in l:
+            r.append(transform_tensors_to_list(i))
+        return r
+    if isinstance(l, dict):
+        r = {}
+        for k,v in l.items():
+            r[k] = transform_tensors_to_list(v)
+        return r
+    return l
 
 # TODO: add loss evaluator for SSD
 @MODELS.register_module()
@@ -101,7 +134,7 @@ class SSDHead(AnchorHead):
         self.num_base_priors = self.prior_generator.num_base_priors
 
         self._init_layers()
-
+        
         self.bbox_coder = TASK_UTILS.build(bbox_coder)
         self.reg_decoded_bbox = reg_decoded_bbox
         self.use_sigmoid_cls = False
@@ -115,7 +148,10 @@ class SSDHead(AnchorHead):
                     self.train_cfg['sampler'], default_args=dict(context=self))
             else:
                 self.sampler = PseudoSampler(context=self)
-
+        self._cnt = 0
+        self._LLALFeatureCnt = 0
+        self.active_SmoothL1Loss = SmoothL1Loss(beta = self.train_cfg['smoothl1_beta'], reduction = "none")
+        
     def _init_layers(self) -> None:
         """Initialize layers of the head."""
         self.cls_convs = nn.ModuleList()
@@ -187,6 +223,40 @@ class SSDHead(AnchorHead):
             self.cls_convs.append(nn.Sequential(*cls_layers))
             self.reg_convs.append(nn.Sequential(*reg_layers))
 
+    # def store_LLAL_feature(self, x, store_path = "SSD_COCO_LLAL", split = "val"):
+    #     if len(x) <= 0:
+    #         return
+    #     path = "./pro_data/" + store_path
+    #     path = os.path.join(path, split)
+    #     create_folder_if_not_exists(path)
+    #     feature_path = os.path.join(path, "LLALFeature/")
+    #     create_folder_if_not_exists(feature_path)
+    #     start = self._LLALFeatureCnt
+    #     for i in range(len(x)):
+    #         for j in range(x[i].shape[0]):
+    #             if features[j] is None:
+    #                 features[j] = [transform_tensors_to_list(x[i][j])]
+    #             else:
+    #                 features[j].append(transform_tensors_to_list(x[i][j]))
+    #     for j in range(len(features)):
+    #         write_json_results(features[j], feature_path + str(start+j) + ".json")
+    
+    def store_LLAL_feature(self, x, store_path = "SSD_COCO_LLAL", split = "val"):
+        if len(x) <= 0:
+            return
+        path = "./pro_data/" + store_path
+        path = os.path.join(path, split)
+        create_folder_if_not_exists(path)
+        feature_path = os.path.join(path, "LLALFeature")
+        create_folder_if_not_exists(feature_path)
+        start = self._LLALFeatureCnt
+        features = [None]*x[0].shape[0]
+        for i in range(len(x)):
+            new_feature_path = os.path.join(feature_path, str(i))
+            create_folder_if_not_exists(new_feature_path)
+            for j in range(x[i].shape[0]):
+                np_write(x[i][j].cpu().numpy(), os.path.join(new_feature_path, str(start+j) + ".npy"))
+                
     def forward(self, x: Tuple[Tensor]) -> Tuple[List[Tensor], List[Tensor]]:
         """Forward features from the upstream network.
 
@@ -207,11 +277,73 @@ class SSDHead(AnchorHead):
         """
         cls_scores = []
         bbox_preds = []
+        self.store_LLAL_feature(x, split="train")
         for feat, reg_conv, cls_conv in zip(x, self.reg_convs, self.cls_convs):
             cls_scores.append(cls_conv(feat))
             bbox_preds.append(reg_conv(feat))
         return cls_scores, bbox_preds
 
+    def get_topk_indexes(self, out_logits, k):
+        k = min(k, out_logits.shape[0])
+        prob = out_logits.softmax(dim=1)
+        prob, _ = prob.max(dim=1)
+        score, indexes = prob.topk(k)
+        indexes,_ = torch.sort(indexes, dim=0)
+        return indexes
+    
+    def store_results(self, cls_score, bbox_pred, labels, bbox_targets, store_path = "SSD_COCO_LLAL", split = "val"):
+        patch_size = 196
+        path = "./pro_data/" + store_path
+        create_folder_if_not_exists(path)
+        path = os.path.join(path, split)
+        create_folder_if_not_exists(path)
+        feature_path = os.path.join(path, "feature/")
+        create_folder_if_not_exists(feature_path)
+        annotation_path = os.path.join(path, "annotation/")
+        create_folder_if_not_exists(annotation_path)
+        index = torch.logical_and(labels != 80, labels >=0)
+        length = index.sum()
+        self._LLALFeatureCnt += 1
+        if length == 0:
+            return
+        if length > patch_size:
+            return
+        loss = torch.zeros(length, device = cls_score.device)
+        filtered_cls_pred = cls_score[index]
+        filtered_bbox_pred = bbox_pred[index]
+        filtered_labels = labels[index]
+        filtered_bbox_targets = bbox_targets[index]
+        loss = F.cross_entropy(filtered_cls_pred, filtered_labels, reduction='none')
+        loss += self.active_SmoothL1Loss(filtered_bbox_pred, filtered_bbox_targets).sum(dim=1)
+        filtered_index = loss <= 50
+        length = filtered_index.sum()
+        if length == 0:
+            return
+        filtered_cls_pred = filtered_cls_pred[filtered_index]
+        filtered_bbox_pred = filtered_bbox_pred[filtered_index]
+        loss = loss[filtered_index]
+        true_indices = torch.nonzero(index)
+        index[true_indices[torch.logical_not(filtered_index)]] = False
+        feature_size = filtered_cls_pred.shape[1] + filtered_bbox_pred.shape[1]
+        feature = torch.zeros(patch_size, feature_size, device = bbox_pred.device)
+        feature[:length] = torch.cat((filtered_bbox_pred, filtered_cls_pred), 1)
+        if length < patch_size:
+            topk = patch_size - length
+            index_neg = torch.logical_not(index)
+            cls_pred_neg = cls_score[index_neg]
+            bbox_pred_neg = bbox_pred[index_neg]
+            index_neg = self.get_topk_indexes(cls_pred_neg, topk)
+            feature[length:] = torch.cat((bbox_pred_neg[index_neg], cls_pred_neg[index_neg]), 1)
+
+        json_data = {}
+        json_data['loss'] = transform_tensors_to_list(loss)
+        json_data['index'] = transform_tensors_to_list(torch.arange(length))
+        json_data['LLALFeature'] = (self._LLALFeatureCnt - 1)
+        write_json_results(json_data, annotation_path + str(self._cnt) + ".json")
+        np_write(feature.cpu().numpy(), feature_path + str(self._cnt) + ".npy")
+        self._cnt += 1
+        
+    
     def loss_by_feat_single(self, cls_score: Tensor, bbox_pred: Tensor,
                             anchor: Tensor, labels: Tensor,
                             label_weights: Tensor, bbox_targets: Tensor,
@@ -274,6 +406,7 @@ class SSDHead(AnchorHead):
             bbox_weights,
             beta=self.train_cfg['smoothl1_beta'],
             avg_factor=avg_factor)
+        self.store_results(cls_score, bbox_pred, labels, bbox_targets, split = "train")
         return loss_cls[None], loss_bbox
 
     def loss_by_feat(

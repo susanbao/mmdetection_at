@@ -171,7 +171,7 @@ def show_all_methods_mean_std(model_dataset, steps, image_path, result_path, lev
 def compute_average_std(std):
     print(f"{np.sqrt(np.sum(np.power(std,2)/std.shape[0])):.2f}")
 
-method_dict = {"random sample": "Random Sample", "ViT all": "our ViTAL"}
+method_dict = {"random sample": "Random Sample", "ViT all": "our ViTAL", "LLAL": "LLAL"}
 result_pd = {}
 temp_list = []
 def take_image_data_for_one_model_dataset(model_dataset, steps = 10000):
@@ -199,7 +199,32 @@ def take_image_data_for_defined_point(model_dataset, steps = 10000):
 def show_image_all_methods_mean_std(model_dataset, steps = 10000):
     show_all_methods_mean_std(model_dataset, steps, "image_true_losses.npy", "image_based_active_testing", "all")
 
-
+def take_image_data_for_defined_point_with_LLAL(model_dataset, steps = 10000, llal_steps = 1):
+    image_path = "image_true_losses.npy"
+    result_path = "image_based_active_testing"
+    level = "all"
+    if model_dataset[-1].isnumeric():
+        model_origin_folder = "_".join(model_dataset.split("_")[:-1])
+    else:
+        model_origin_folder = model_dataset
+    base_path = f"./pro_data/{model_origin_folder}/val/"
+    sample_size_threshold = np_read(base_path + image_path).shape[0]
+    result_json_path = f"./results/{model_dataset}/{result_path}/"
+    true_loss_estimation_path = result_json_path + "None.json"
+    test_whole_data = read_baseline_data(true_loss_estimation_path)
+    results = add_entries(result_json_path + "random_sample_3_runs.json")
+    vit_results = add_entries(result_json_path + f"ViT_{level}_runs_{steps}.json")
+    llal_results = add_entries(result_json_path + f"LLAL_{level}_runs_{llal_steps}.json")
+    results = pd.concat([results, vit_results, llal_results], ignore_index=True)
+    min_size = int(min_size_p * sample_size_threshold)
+    max_size = int(max_size_p * sample_size_threshold)
+    results = results[results['sample_size'] >= min_size]
+    results = results[results['sample_size'] <= max_size]
+    y_metric = "loss"
+    results[y_metric] = abs(results[y_metric] - test_whole_data[y_metric])
+    results[y_metric] = results[y_metric] / test_whole_data[y_metric] * 100
+    results['sample_size'] = results['sample_size'] / sample_size_threshold * 100
+    return results
 
 def take_region_data_for_one_model_dataset(model_dataset, steps = 10000):
     if model_dataset[-1].isnumeric():
@@ -226,6 +251,26 @@ def take_region_data_for_defined_point(model_dataset,  steps = 10000):
 def show_region_all_methods_mean_std(model_dataset, steps = 10000):
     show_all_methods_mean_std(model_dataset, steps, "region_true_losses.npy", "region_based_active_testing", "all")
 
+def show_image_all_methods_mean_std_LLAL(model_dataset, llal_step):
+    image_path, result_path, level = "image_true_losses.npy", "image_based_active_testing", "all"
+    global temp_list, result_pd
+    if model_dataset[-1].isnumeric():
+        model_origin_folder = "_".join(model_dataset.split("_")[:-1])
+    elif model_dataset.split("_")[-1] == "image" or model_dataset.split("_")[-2] == "image":
+        model_origin_folder = "_".join(model_dataset.split("_")[:2])
+    else:
+        model_origin_folder = model_dataset
+    base_path = f"./pro_data/{model_origin_folder}/val/"
+    sample_size_threshold = np_read(base_path + image_path).shape[0]
+    result_json_path = f"./results/{model_dataset}/{result_path}/"
+    test_whole_data = read_baseline_data(result_json_path + "None.json")['loss']
+    temp_list = []
+    print_mean_std(result_json_path + "random_sample_3_runs.json", test_whole_data, sample_size_threshold)
+    print_mean_std(result_json_path + f"LLAL_{level}_runs_{llal_step}.json", test_whole_data, sample_size_threshold)
+    print("====================================================================================================")
+    result_pd[model_dataset] = copy.deepcopy(temp_list)
+    
+
 # min_size_p = 0.001
 # max_size_p = 0.04
 
@@ -233,14 +278,29 @@ min_size_p = 0.001
 max_size_p = 0.01
 
 if True:
+    show_image_all_methods_mean_std_LLAL("SSD_COCO", 1)
+    yolo = take_image_data_for_defined_point_with_LLAL("SSD_COCO", 70000, 1)
+    plot_figure(yolo, "Det_SSD_COCO_LLAL_Image", find_dff = True)
+
+if False:
     dataset_model = "YOLOX_COCO"
     step_array = np.arange(10000, 100001, 10000)
     for step in step_array:
         show_image_all_methods_mean_std(dataset_model, step)
 
-if True:
+if False:
     yolo = take_image_data_for_defined_point("YOLOX_COCO", 30000)
     plot_figure(yolo, "Det_YOLOX_COCO_Image", find_dff = True)
+
+if False:
+    dataset_model = "SSD_COCO"
+    step_array = np.arange(10000, 100001, 10000)
+    for step in step_array:
+        show_image_all_methods_mean_std(dataset_model, step)
+
+if False:
+    yolo = take_image_data_for_defined_point("SSD_COCO", 70000)
+    plot_figure(yolo, "Det_SSD_COCO_Image", find_dff = True)
 
 if False:
     dataset_model = "DETR_COCO"
@@ -302,15 +362,25 @@ if False:
 min_size_p = 0.0001
 max_size_p = 0.001
 
-if True:
+if False:
     dataset_model = "YOLOX_COCO"
     step_array = np.arange(10000, 100001, 10000)
     for step in step_array:
         show_region_all_methods_mean_std(dataset_model, step)
 
-if True:
+if False:
     yolo = take_region_data_for_defined_point("YOLOX_COCO", 10000)
     plot_figure(yolo, "Det_YOLOX_COCO_Region", find_dff = True)
+
+if False:
+    dataset_model = "SSD_COCO"
+    step_array = np.arange(10000, 100001, 10000)
+    for step in step_array:
+        show_region_all_methods_mean_std(dataset_model, step)
+
+if False:
+    yolo = take_region_data_for_defined_point("SSD_COCO", 20000)
+    plot_figure(yolo, "Det_SSD_COCO_Region", find_dff = True)
 
 if False:
     dataset_model = "DETR_COCO"

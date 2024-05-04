@@ -34,6 +34,16 @@ mim download mmdet --config yolox_s_8x8_300e_coco --dest ./checkpoints
 python tools/test.py ./yolox_s_8x8_300e_coco.py ./checkpoints/yolox_s_8x8_300e_coco_20211121_095711-4592a793.pth
 cp ./checkpoints/yolox_s_8x8_300e_coco.py ./yolox_s_8x8_300e_coco.py
 
+mim download mmdet --config faster-rcnn_r50_fpn_1x_coco --dest ./checkpoints
+
+python tools/test.py ./configs/faster_rcnn/faster-rcnn_r50_fpn_1x_coco.py ./checkpoints/faster_rcnn_r50_fpn_1x_coco_20200130-047c8118.pth
+
+
+mim download mmdet --config ssd300_coco --dest ./checkpoints
+python tools/test.py ./configs/ssd/ssd300_coco.py ./checkpoints/ssd300_coco_20210803_015428-d231a06e.pth
+
+./mmdet/models/dense_heads/ssd_head.py
+
 prepare data:
 python prepare_data_for_ViT.py --split train >logs/prepare_detr_train_data.logs 2>logs/prepare_detr_train_data.err&
 python prepare_data_for_ViT.py --start_nums 55895 --count 55398 --split train >logs/prepare_detr_train_data.logs 2>logs/prepare_detr_train_data.err&
